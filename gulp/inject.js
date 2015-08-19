@@ -25,7 +25,8 @@ gulp.task('inject', ['scripts', 'styles'], function () {
 
   var injectOptions = {
     ignorePath: [conf.paths.src, path.join(conf.paths.tmp, '/serve')],
-    addRootSlash: false
+    addRootSlash: false,
+    selfClosingTag: true
   };
 
   return gulp.src(path.join(conf.paths.src, '/*.html'))

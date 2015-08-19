@@ -8,6 +8,16 @@ var $ = require('gulp-load-plugins')({
   pattern: ['gulp-*', 'main-bower-files', 'uglify-save-license', 'del']
 });
 
+gulp.task('zip', function () {
+  return gulp.src([
+      path.join(conf.paths.dist, '/assets'),
+      path.join(conf.paths.dist, '/scripts'),
+      path.join(conf.paths.dist, '/styles')
+    ])
+    .pipe($.zip('dist.zip'))
+    .pipe(gulp.dest(conf.paths.dist))
+});
+
 gulp.task('partials', function () {
   return gulp.src([
     path.join(conf.paths.src, '/app/**/*.html'),
@@ -38,7 +48,18 @@ gulp.task('html', ['inject', 'partials'], function () {
   var cssFilter = $.filter('**/*.css');
   var assets;
 
-  return gulp.src(path.join(conf.paths.tmp, '/serve/*.html'))
+  var revReplaceOptions = {
+    modifyReved: function (filename) {
+
+      if(conf.salesforce.resourceFolder) {
+        filename = '{!URLFOR($Resource.' + conf.salesforce.resourceFolder + ',\'' + filename + '\')}';
+      }
+
+      return filename;
+    }
+  };
+
+  gulp.src(path.join(conf.paths.tmp, '/serve/*.html'))
     .pipe($.inject(partialsInjectFile, partialsInjectOptions))
     .pipe(assets = $.useref.assets())
     .pipe($.rev())
@@ -51,7 +72,8 @@ gulp.task('html', ['inject', 'partials'], function () {
     .pipe(cssFilter.restore())
     .pipe(assets.restore())
     .pipe($.useref())
-    .pipe($.revReplace())
+    .pipe($.revReplace(revReplaceOptions))
+    .pipe($.debug())
     .pipe(htmlFilter)
     .pipe($.minifyHtml({
       empty: true,
@@ -90,4 +112,10 @@ gulp.task('clean', function (done) {
   $.del([path.join(conf.paths.dist, '/'), path.join(conf.paths.tmp, '/')], done);
 });
 
+gulp.task('build:sf:config', function () {
+  conf.paths.dist = 'dist-sf'
+  conf.salesforce.resourceFolder = 'heatmapStatic';
+});
+
 gulp.task('build', ['html', 'fonts', 'other']);
+gulp.task('build:sf', ['build:sf:config', 'build', 'zip']);
