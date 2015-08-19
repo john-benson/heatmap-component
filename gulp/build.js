@@ -3,6 +3,7 @@
 var path = require('path');
 var gulp = require('gulp');
 var conf = require('./conf');
+var runSequence = require('run-sequence');
 
 var $ = require('gulp-load-plugins')({
   pattern: ['gulp-*', 'main-bower-files', 'uglify-save-license', 'del']
@@ -10,9 +11,9 @@ var $ = require('gulp-load-plugins')({
 
 gulp.task('zip', function () {
   return gulp.src([
-      path.join(conf.paths.dist, '/assets'),
-      path.join(conf.paths.dist, '/scripts'),
-      path.join(conf.paths.dist, '/styles')
+      path.join(conf.paths.dist, '**/*.png'),
+      path.join(conf.paths.dist, '**/*.js'),
+      path.join(conf.paths.dist, '**/*.css')
     ])
     .pipe($.zip('dist.zip'))
     .pipe(gulp.dest(conf.paths.dist))
@@ -59,7 +60,7 @@ gulp.task('html', ['inject', 'partials'], function () {
     }
   };
 
-  gulp.src(path.join(conf.paths.tmp, '/serve/*.html'))
+  return gulp.src(path.join(conf.paths.tmp, '/serve/*.html'))
     .pipe($.inject(partialsInjectFile, partialsInjectOptions))
     .pipe(assets = $.useref.assets())
     .pipe($.rev())
@@ -73,14 +74,7 @@ gulp.task('html', ['inject', 'partials'], function () {
     .pipe(assets.restore())
     .pipe($.useref())
     .pipe($.revReplace(revReplaceOptions))
-    .pipe($.debug())
     .pipe(htmlFilter)
-    .pipe($.minifyHtml({
-      empty: true,
-      spare: true,
-      quotes: true,
-      conditionals: true
-    }))
     .pipe(htmlFilter.restore())
     .pipe(gulp.dest(path.join(conf.paths.dist, '/')))
     .pipe($.size({ title: path.join(conf.paths.dist, '/'), showFiles: true }));
@@ -109,13 +103,41 @@ gulp.task('other', function () {
 });
 
 gulp.task('clean', function (done) {
-  $.del([path.join(conf.paths.dist, '/'), path.join(conf.paths.tmp, '/')], done);
+  return $.del([path.join(conf.paths.dist, '/'), path.join(conf.paths.tmp, '/')], done);
 });
 
 gulp.task('build:sf:config', function () {
   conf.paths.dist = 'dist-sf'
-  conf.salesforce.resourceFolder = 'heatmapStatic';
+  conf.salesforce.resourceFolder = 'heatmapDist';
 });
 
+gulp.task('appendApexPage', function () {
+  return gulp.src(path.join(conf.paths.dist, 'index.html'))
+    .pipe($.insert.wrap('<apex:page>', '</apex:page>'))
+    .pipe(gulp.dest(path.join(conf.paths.dist, '/')));
+});
+
+gulp.task('closeLinks', function () {
+
+  return gulp.src(path.join(conf.paths.dist, 'index.html'))
+    .pipe($.replaceTask({
+      patterns: [
+        {
+          match: '.css\'\)}\">',
+          replacement: '.css\')}"/>'
+        },
+        {
+          match: '<head>',
+          replacement: '<head><base href="{!URLFOR($Resource.' + conf.salesforce.resourceFolder + ', \'/\')}" />'
+        }
+      ],
+      usePrefix: false
+    }))
+    .pipe(gulp.dest(path.join(conf.paths.dist, '/')));
+})
+
 gulp.task('build', ['html', 'fonts', 'other']);
-gulp.task('build:sf', ['build:sf:config', 'build', 'zip']);
+
+gulp.task('build:sf', function () {
+  runSequence('build:sf:config', 'clean', 'build', 'zip', 'appendApexPage', 'closeLinks');
+});
