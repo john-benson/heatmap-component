@@ -3,37 +3,60 @@
 
   angular
     .module('heatmapComponent')
-    .controller('MainController', MainController);
+    .controller('MainController', ['$scope', 'uiGmapGoogleMapApi', '$http', MainController]);
 
   /** @ngInject */
-  function MainController($timeout, webDevTec, toastr) {
+  function MainController($scope, GoogleMapsAPI, $http) {
     var vm = this;
 
-    vm.awesomeThings = [];
-    vm.classAnimation = '';
-    vm.creationDate = 1439926105356;
-    vm.showToastr = showToastr;
+    this.map = {
+      center: {
+        latitude: 45, longitude: -73
+      },
+      zoom: 8,
+      markersId: 'mark'
+    };
 
-    activate();
+    this.markers = [
+      {
+        coords: {
+          latitude: 45,
+          longitude: -73
+        },
+        title: 'Marker 1',
+        id: 1
+      }
+    ];
 
-    function activate() {
-      getWebDevTec();
-      $timeout(function() {
-        vm.classAnimation = 'rubberBand';
-      }, 4000);
-    }
 
-    function showToastr() {
-      toastr.info('Fork <a href="https://github.com/Swiip/generator-gulp-angular" target="_blank"><b>generator-gulp-angular</b></a>');
-      vm.classAnimation = '';
-    }
+    $http.get('/app/data/phillyCoords.json').then(function (coordinates) {
+      vm.map.boundries = [];
 
-    function getWebDevTec() {
-      vm.awesomeThings = webDevTec.getTec();
+      var objs = coordinates.data.objects;
 
-      angular.forEach(vm.awesomeThings, function(awesomeThing) {
-        awesomeThing.rank = Math.random();
-      });
-    }
+      for ( var i = 0; i < objs.length; i++ ) {
+        var coordinates = objs[i].shape.coordinates,
+            group = { id: i, path: [], stroke: { color: '#000000', weight: 3 } };
+
+        for( var y = 0; y < coordinates.length; y++ ) {
+          var coordGroup = coordinates[y][0];
+
+          for ( var z = 0; z < coordGroup.length; z++ ) {
+            group.path.push({
+              latitude: coordGroup[0],
+              longitude: coordGroup[1]
+            });
+          }
+        }
+
+        vm.map.boundries.push(group);
+      }
+
+      console.log(vm.map.boundries);
+    });
+
+    GoogleMapsAPI.then(function (maps){
+    });
+
   }
 })();

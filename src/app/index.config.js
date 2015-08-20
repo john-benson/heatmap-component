@@ -3,10 +3,10 @@
 
   angular
     .module('heatmapComponent')
-    .config(config);
+    .config(['$logProvider', 'toastr', 'uiGmapGoogleMapApiProvider', config]);
 
   /** @ngInject */
-  function config($logProvider, toastr) {
+  function config($logProvider, toastr, uiGmapGoogleMapApi) {
     // Enable log
     $logProvider.debugEnabled(true);
 
@@ -15,6 +15,12 @@
     toastr.options.positionClass = 'toast-top-right';
     toastr.options.preventDuplicates = true;
     toastr.options.progressBar = true;
+
+    uiGmapGoogleMapApi.configure({
+      key: 'AIzaSyBMhgWdfJFl1bz6fcnawbDoU5zKk2adcwc',
+      v: '3.20',
+      libraries: 'visualization'
+    });
   }
 
 })();
