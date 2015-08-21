@@ -1,18 +1,23 @@
 <div layout="vertical" layout-fill>
+{{main.map.zoom }}
+  <ui-gmap-google-map center="main.map.center" zoom="main.map.zoom">
 
-  <md-content class='map-container'>
-    <ui-gmap-google-map center="main.map.center" zoom="main.map.zoom">
-      <ui-gmap-markers models="main.markers" coords="'coords'" idkey="'id'">
-          <ui-gmap-windows >
-            <div>
-              <p ng-non-bindable>This is an info window at {{ coords.latitude | number:4 }}, {{ coords.longitude | number:4 }}!</p>
-              <p class="muted">My marker will stay open when the window is popped up!</p>
-            </div>
-          </ui-gmap-windows>
-      </ui-gmap-markers>
-      <ui-gmap-polyline ng-repeat="p in map.polylines" path="p.path" stroke="p.stroke">
-      </ui-gmap-polyline>
-    </ui-gmap-google-map>
-  </md-content>
+    <ui-gmap-layer show="main.map.zoom >= 12" namespace="visualization" type="HeatmapLayer" onCreated="main.map.heatLayerCreated"></ui-gmap-layer>
+
+    <ui-gmap-markers events="main.map.events" models="main.map.markers" coords="'coords'" idKey="'id'" control="main.markerControls" ng-if="main.map.zoom >= 14">
+        <ui-gmap-windows >
+          <div>
+            <p ng-non-bindable>Address : {{request.address}}</p>
+            <p ng-non-bindable>Service Name : {{request.service_name}}</p>
+            <p ng-non-bindable>Agency Responsible : {{request.agency_responsible}}</p>
+            <p>Request Datetime : {{ moment(request.requested_datetime).format("MMM Do, YY") }}</p>
+          </div>
+        </ui-gmap-windows>
+    </ui-gmap-markers>
+
+    <ui-gmap-polylines models="main.map.boundries" path="'path'" stroke="'stroke'" static="true">
+    </ui-gmap-polyline>
+
+  </ui-gmap-google-map>
 
 </div>

@@ -4,7 +4,8 @@
 
   angular
     .module('heatmapComponent')
-    .constant('toastr', toastr)
-    .constant('moment', moment);
+      .constant('toastr', toastr)
+      .constant('moment', moment)
+      .constant('_', _);
 
 })();
