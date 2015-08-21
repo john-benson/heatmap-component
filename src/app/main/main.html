@@ -1,18 +1,52 @@
 <div layout="vertical" layout-fill>
-{{main.map.zoom }}
-  <ui-gmap-google-map center="main.map.center" zoom="main.map.zoom">
+
+  <md-content>
+    <md-toolbar class="floating-toolbar">
+      <div class="md-toolbar-tools">
+        <md-button class="md-icon-button" aria-label="Settings" ng-click="main.openSideMenu('left')">
+          <md-icon md-font-set="material-icons" class="md-36"> settings </md-icon>
+        </md-button>
+        <h2>
+          <span></span>
+        </h2>
+      </div>
+    </md-toolbar>
+
+    <md-sidenav md-component-id="left" class="md-sidenav-left md-whiteframe-z2">
+      <ul class="sidemenu-list">
+        <li ng-repeat="(key, value) in main.sparklineAgencyCharts" class="sparkline-container">
+          <div class="title">
+            <span class="name">{{key}}</span>
+            <span class="count">{{value.totalCount}}</span>
+          </div>
+          <nvd3 options="value.chartOptions" data="value.chartData"></nvd3>
+          <ul class="sidemenu-sublist">
+            <li ng-repeat="(subKey, subvalue) in value.subCharts" class="sparkline-container">
+              <div class="title">
+                <span class="name">{{subKey}}</span>
+                <span class="count">{{subvalue.totalCount}}</span>
+              </div>
+              <nvd3 options="subvalue.chartOptions" data="subvalue.chartData"></nvd3>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </md-sidenav>
+  </md-content>
+
+  <ui-gmap-google-map events="main.map.events" center="main.map.center" zoom="main.map.zoom">
 
     <ui-gmap-layer show="main.map.zoom >= 12" namespace="visualization" type="HeatmapLayer" onCreated="main.map.heatLayerCreated"></ui-gmap-layer>
 
-    <ui-gmap-markers events="main.map.events" models="main.map.markers" coords="'coords'" idKey="'id'" control="main.markerControls" ng-if="main.map.zoom >= 14">
-        <ui-gmap-windows >
-          <div>
-            <p ng-non-bindable>Address : {{request.address}}</p>
-            <p ng-non-bindable>Service Name : {{request.service_name}}</p>
-            <p ng-non-bindable>Agency Responsible : {{request.agency_responsible}}</p>
-            <p>Request Datetime : {{ moment(request.requested_datetime).format("MMM Do, YY") }}</p>
-          </div>
-        </ui-gmap-windows>
+    <ui-gmap-markers models="main.map.markers" coords="'coords'" idKey="'id'" control="main.map.markersController">
+      <ui-gmap-windows >
+        <div>
+          <p ng-non-bindable>Address : {{request.address}}</p>
+          <p ng-non-bindable>Service Name : {{request.service_name}}</p>
+          <p ng-non-bindable>Agency Responsible : {{request.agency_responsible}}</p>
+          <p>Request Datetime : {{ moment(request.requested_datetime).format("MMM Do, YY") }}</p>
+        </div>
+      </ui-gmap-windows>
     </ui-gmap-markers>
 
     <ui-gmap-polylines models="main.map.boundries" path="'path'" stroke="'stroke'" static="true">

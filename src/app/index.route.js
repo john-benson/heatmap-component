@@ -14,30 +14,53 @@
         controller: 'MainController',
         controllerAs: 'main',
         resolve: {
+
+          heatmapConfiguration: function () {
+            return {
+
+            };
+          },
+
+          agencyServiceRequests: function (serviceRequests) {
+            var agencyServiceRequests = _.groupBy(serviceRequests, function (item) {
+              return item.request.agency_responsible;
+            });
+
+            for ( var x in agencyServiceRequests ) {
+              var agencyCategories = _.groupBy(agencyServiceRequests[x], function (item) {
+                return item.request.service_name;
+              });
+
+              agencyServiceRequests[x] = agencyCategories;
+            }
+
+            return agencyServiceRequests;
+          },
+
           serviceRequests: function(ServiceRequest, _, moment) {
             return ServiceRequest.query().$promise.then(function (result){
-              var items = _.filter(result, {service_name: 'Maintenance Residential', status: 'Open'}),
+              var items = _.filter(result, {status: 'Open'}),
                   markers = [];
 
               for ( var i = 0; i < items.length; i++ ) {
-                var item = items[i],
-                    daysSince = moment(item.requested_datetime).diff(moment('2015-07-01T23:59:59.000Z'), 'days');
+                var item = items[i];
 
-                if(daysSince < 31 && daysSince > 0) {
-                  markers.push({
-                    coords: {
-                      latitude: item.latitude,
-                      longitude: item.longitude
-                    },
-                    request: item,
-                    id: i
-                  });
-                }
+                item.requested_day = moment(item.requested_datetime, 'YYYY-MM-DD').valueOf();
+
+                markers.push({
+                  coords: {
+                    latitude: item.latitude,
+                    longitude: item.longitude
+                  },
+                  request: item,
+                  id: i
+                });
               }
 
               return markers;
             });
           },
+
           boundries: function($http) {
             return $http.get('/app/data/phillyCoords.json').then(function (coordinates) {
               var boundries = [];

@@ -1,7 +1,69 @@
+$toolbar-height: 64px;
+
 .angular-google-map-container {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 0;
+  position:absolute;
+  top: $toolbar-height; right: 0; left: 0; bottom: 0;
+}
+
+md-content {
+    width: 100%;
+    .sidemenu-list, .sidemenu-sublist {
+        padding: 0;
+        margin: 0;
+
+        .sparkline-container {
+            padding: 0;
+            border: 1px solid #ddd;
+            margin: -1px 0;
+            padding: 16px;
+
+            .title {
+                height: 30px;
+                position: relative;
+
+                .name, .count {
+                    display: inline-block;
+                }
+
+                .count {
+                    background-color: #11c1f3;
+                    color: #fff;
+                    border-radius: 10px;
+                    padding: 2px 10px;
+                    position: absolute;
+                    right: 0;
+                }
+
+                .name {
+                    max-width: 200px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+            }
+
+            .nv-valueWrap {
+                display: none;
+            }
+
+            nvd3 {
+                z-index: 1000;
+                svg {
+                    overflow: visible;
+                }
+            }
+        }
+    }
+
+    md-sidenav {
+        position: absolute;
+        top: $toolbar-height;
+        transition-duration: 0.5s;
+        transition-property: all;
+        transition-timing-function: ease;
+    }
+
+    md-toolbar {
+        height: $toolbar-height;
+    }
 }
