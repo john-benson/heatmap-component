@@ -22,12 +22,6 @@
           bottom: 0
         },
         transitionDuration: 250,
-        x: function(d, i){
-          return d.x;
-        },
-        y: function(d, i) {
-          return d.y;
-        },
         xTickFormat: function (d) {
           return d3.time.format('%b %d')(new Date(+d));
         },
@@ -114,9 +108,9 @@
           this.sparklineAgencyCharts[agencyName].subCharts[category] = {
             chartOptions : defaultSparklineChartOptions,
             chartData: items,
-            totalCount: _.reduce(items, function (total, item) {
+            totalCount: _.reduce(items, function (total, item, iv) {
               return total + item.y
-            })
+            }, 0)
           }
         }
 
