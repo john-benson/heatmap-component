@@ -7,31 +7,40 @@
           <md-icon md-font-set="material-icons" class="md-36"> settings </md-icon>
         </md-button>
         <h2>
-          <span></span>
+          <span>{{main.selectedAgency}} - {{main.selectedStatus}}</span>
         </h2>
       </div>
     </md-toolbar>
 
     <md-sidenav md-component-id="left" class="md-sidenav-left md-whiteframe-z2">
-      <ul class="sidemenu-list">
+      <ul class="sidemenu-list" scrollable>
         <li ng-repeat="(key, value) in main.sparklineAgencyCharts" class="sparkline-container">
-          <div class="title">
-            <span class="name">{{key}}</span>
-            <span class="count">{{value.totalCount}}</span>
-          </div>
+          <md-checkbox class="title" ng-model="isChecked" aria-label="Finished?" ng-click="isChecked ? main.removeAgency('{{key}}') : main.selectAgency('{{key}}')">
+            <div class="title" >
+              <span class="name">{{key}}</span>
+              <span class="count">{{value.totalCount}}</span>
+            </div>
+          </md-checkbox>
           <nvd3 options="value.chartOptions" data="value.chartData"></nvd3>
-          <ul class="sidemenu-sublist">
+
+          <ul ng-show="value.showSubCharts" class="sidemenu-sublist">
             <li ng-repeat="(subKey, subvalue) in value.subCharts" class="sparkline-container">
-              <div class="title">
-                <span class="name">{{subKey}}</span>
-                <span class="count">{{subvalue.totalCount}}</span>
-              </div>
+              <md-checkbox class="title" ng-model="isChecked" aria-label="Finished?" ng-click="isChecked ? main.removeCategory('{{subKey}}') : main.selectCategory('{{subKey}}')">
+                <div class="title">
+                  <span class="name">{{subKey}}</span>
+                  <span class="count">{{subvalue.totalCount}}</span>
+                </div>
+              </md-checkbox>
               <nvd3 options="subvalue.chartOptions" data="subvalue.chartData"></nvd3>
             </li>
           </ul>
         </li>
       </ul>
     </md-sidenav>
+
+    <md-button class="bottom-right md-icon-button md-fab md-primary" aria-label="Settings">
+      <md-icon md-font-set="material-icons"> assessment </md-icon>
+    </md-button>
   </md-content>
 
   <ui-gmap-google-map events="main.map.events" center="main.map.center" zoom="main.map.zoom">
