@@ -1,0 +1,35 @@
+<div class="sidemenu-list">
+  <div ng-repeat="status in main.statuses">
+    <md-checkbox ng-checked="main.isStatusSelected('{{status}}')" ng-click="main.toggleStatus('{{status}}')">{{status}}</md-checkbox>
+  </div>
+  <div ng-repeat="(key, value) in main.sparklineAgencyCharts" class="sparkline-container" ng-class="{'open' : main.isAgencySelected('{{key}}')}">
+    <div>
+      <md-checkbox class="title" ng-checked="main.isAgencySelected('{{key}}')" ng-click="main.toggleAgency('{{key}}'); showSubMenu = false">
+        <div class="title" >
+          <span class="name">{{key}}</span>
+          <span class="count">{{value.totalCount}}</span>
+        </div>
+      </md-checkbox>
+
+      <nvd3 options="value.chartOptions" data="value.chartData"></nvd3>
+
+      <div class="sidemenu-sublist"  class="sub" ng-show="main.isAgencySelected('{{key}}')">
+        <md-button class="sublist-toggle md-primary md-raised" ng-click="showSubMenu = !showSubMenu">
+          <md-icon md-font-set="material-icons"> add </md-icon>
+        </md-button>
+
+        <div ng-show="showSubMenu">
+          <div ng-repeat="(subKey, subvalue) in value.subCharts" class="sparkline-container">
+            <md-checkbox class="title" ng-checked="main.isCategorySelected('{{key}}','{{subKey}}')" ng-click="main.toggleCategory('{{key}}','{{subKey}}')">
+              <div class="title">
+                <span class="name">{{subKey}}</span>
+                <span class="count">{{subvalue.totalCount}}</span>
+              </div>
+            </md-checkbox>
+            <nvd3 options="subvalue.chartOptions" data="subvalue.chartData"></nvd3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

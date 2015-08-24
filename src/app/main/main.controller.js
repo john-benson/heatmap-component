@@ -6,7 +6,7 @@
     .controller('MainController', MainController);
 
   /** @ngInject */
-  function MainController($scope, moment, boundries, agencyServiceRequests, _, $timeout, $mdSidenav, $mdUtil, heatmapConfiguration) {
+  function MainController($scope, moment, boundries, serviceRequests, agencyServiceRequests, _, $timeout, $mdSidenav, heatmapConfiguration, $q) {
     var vm = this;
 
     var sparklineOptions = {
@@ -17,11 +17,10 @@
         width: 250,
         margin: {
           top: 15,
-          left: 30,
+          left: 35,
           right: 0,
           bottom: 0
         },
-        transitionDuration: 250,
         xTickFormat: function (d) {
           return d3.time.format('%b %d')(new Date(+d));
         },
@@ -40,18 +39,39 @@
       bottom: 0
     };
 
-    vm.selectedAgency = 'License & Inspections';
-    vm.selectedCategory = 'Maintenance Residential';
-    vm.selectedStatus = 'Open';
-    vm.selectedStartDate = moment(1435719600000);
-    vm.selectedEndDate = moment(1438311600000);
+    vm.statuses = _.uniq(_.pluck(_.pluck(serviceRequests, 'request'), 'status'));
+    vm.selectedStatuses = ['Open'];
+    vm.selectedAgencies = {'License & Inspections' : _.keys(agencyServiceRequests['License & Inspections'])};
+    vm.selectedStartDate = 1435719600000;
+    vm.selectedEndDate = 1438311600000;
+
+    vm.debouncedMapRedraw = _.debounce(function () {
+      vm.showMarkers(vm.gMap);
+      vm.showHeatmapPoints(vm.gMap);
+      $scope.$apply();
+    }, 250);
+
+    vm.debouncedUpdateChartsAndRequests = _.debounce(function () {
+      vm.updateCharts();
+      vm.updateServiceRequests();
+      $scope.$apply();
+    }, 250);
+
+    vm.dateSlider = {
+      ceil: 1438311600000, // to be set to today's date
+      floor: 1435719600000, // to be set to 30 days before today's date
+      onChange: vm.debouncedUpdateChartsAndRequests,
+      translate: function (val) {
+        return moment(val).format('ll');
+      }
+    };
 
     $scope.moment = moment;
 
-    this.markerControls = {};
-    this.sparklineAgencyCharts = {};
+    vm.markerControls = {};
+    vm.sparklineAgencyCharts = {};
 
-    this.map = {
+    vm.map = {
       center: {
         latitude: 40.069482,
         longitude: -74.976142
@@ -62,11 +82,9 @@
       boundries: boundries,
       events: {
         idle: function (gMap, eventName, originalEventArgs) {
-          // set a timeout so that the gMap.getBounds() accuartely reflects the correct number
-          $timeout(function () {
-            vm.showMarkers(gMap);
-            vm.showHeatmapPoints(gMap);
-          }, 100);
+          vm.gMap = gMap;
+
+          vm.debouncedMapRedraw();
         },
       },
 
@@ -75,7 +93,7 @@
       }
     };
 
-    this.fillEmptyDays = function (timeseries, startDate, endDate) {
+    vm.fillEmptyDays = function (timeseries, startDate, endDate) {
       for (var x = startDate.clone(); x.diff(endDate, 'days') <= 0; x.add(1, 'days') ) {
         if (!timeseries[x.valueOf()]) {
           timeseries[x.valueOf()] = 0;
@@ -85,13 +103,7 @@
       return timeseries;
     };
 
-    this.buildTimeSeriesData = function (requestData, filterParams, startDate, endDate) {
-
-      if (filterParams instanceof Date) {
-        startDate = filterParams;
-        endDate = startDate;
-        filterParams = null;
-      }
+    vm.buildTimeSeriesData = function (requestData, startDate, endDate) {
 
       var charts = {};
 
@@ -107,15 +119,17 @@
 
         for (var category in requestData[agencyName]) {
 
-          var categoryServiceRequests = _.pluck(requestData[agencyName][category], 'request');
+          var categoryServiceRequests = _.filter(_.pluck(requestData[agencyName][category], 'request'), function (item) {
+            return item.requested_day >= startDate && item.requested_day <= endDate
+          });
 
-          if (filterParams) {
-            categoryServiceRequests = _.filter(categoryServiceRequests, filterParams);
-          }
+          categoryServiceRequests = _.filter(categoryServiceRequests, function (item) {
+            return _.contains(vm.selectedStatuses, item.status);
+          });
 
           var timeseriesData = vm.fillEmptyDays(_.countBy(categoryServiceRequests, function(item) {
             return item.requested_day;
-          }), startDate, endDate);
+          }), moment(startDate), moment(endDate));
 
           for ( var timestamp in timeseriesData ){
             var count = timeseriesData[timestamp];
@@ -128,7 +142,7 @@
             charts[agencyName].totalCount += count;
           }
 
-          var items = this.convertAndSortTimeseriesData(timeseriesData);
+          var items = vm.convertAndSortTimeseriesData(timeseriesData);
 
           charts[agencyName].subCharts[category] = {
             chartOptions : subSparklineOptions,
@@ -139,26 +153,27 @@
           }
         }
 
-        charts[agencyName].chartData = this.convertAndSortTimeseriesData(charts[agencyName].chartData);
+        charts[agencyName].chartData = vm.convertAndSortTimeseriesData(charts[agencyName].chartData);
       }
-
       return charts;
     };
 
-    this.convertAndSortTimeseriesData = function (data) {
-     return _.sortBy(_.map(data, function (count, time) {
+    vm.convertAndSortTimeseriesData = function (data) {
+      return _.sortBy(_.map(data, function (count, time) {
         return {
           x: +time,
           y: count
         };
-      }), 'x')
+      }), 'x');
     };
 
-    this.openSideMenu = function (id) {
+    vm.openSideMenu = function (id) {
+      vm.sideBarOpened = !vm.sideBarOpened;
+
       return $mdSidenav(id).toggle();
     };
 
-    this.showHeatmapPoints = function (gMap) {
+    vm.showHeatmapPoints = function (gMap) {
       if(vm.heatmapLayer) {
 
         var layerData = [],
@@ -178,7 +193,7 @@
       }
     };
 
-    this.showMarkers = function (gMap) {
+    vm.showMarkers = function (gMap) {
       vm.map.markers = [];
 
       for (var i = 0; i < vm.serviceRequests.length; i++ ) {
@@ -189,33 +204,86 @@
       }
     };
 
-    this.addAgency = function (agency) {
-      vm.selectedAgencies.push(agency);
-    };
-
-    this.removeAgency = function (agency) {
-      vm.selectedAgencies = _.remove(vm.selectedAgencies, function (item)item {
-        return item === agency;
-      });
-    };
-
-    this.addCategory = function (category) {
-      vm.selectedCategories.push(category);
-    };
-
-    this.removeCategory = function (category) {
-      vm.selectedCategories = _.remove(vm.selectedCategories, function (item)item {
-        return item === category;
-      });
-    };
-
-    this.showAgencyCategories = function (agency) {
+    vm.showAgencyCategories = function (agency) {
       agency.showSubCharts = !agency.showSubCharts;
     };
 
-    vm.serviceRequests = agencyServiceRequests[vm.selectedAgency][vm.selectedCategory];
+    vm.updateServiceRequests = function () {
+      console.time('updateServiceRequests');
 
-    vm.sparklineAgencyCharts = vm.buildTimeSeriesData(agencyServiceRequests, {status : vm.selectedStatus}, vm.selectedStartDate, vm.selectedEndDate);
+      vm.serviceRequests = [];
+      for (var agency in vm.selectedAgencies ){
+        for (var i = 0; i < vm.selectedAgencies[agency].length; i++){
+          var curAgency = vm.selectedAgencies[agency][i],
+              curRequests = agencyServiceRequests[agency][curAgency];
 
+          vm.serviceRequests = vm.serviceRequests.concat(_.filter(curRequests, function (item) {
+              return _.contains(vm.selectedStatuses, item.request.status) &&
+                    item.request.requested_day >= vm.selectedStartDate &&
+                    item.request.requested_day <= vm.selectedEndDate;
+          }));
+        }
+      }
+
+      if(vm.gMap){
+        vm.showMarkers(vm.gMap);
+        vm.showHeatmapPoints(vm.gMap);
+      }
+
+      console.timeEnd('updateServiceRequests');
+    }
+
+    vm.isAgencySelected = function(agency) {
+      return !!vm.selectedAgencies[agency];
+    }
+
+    vm.isCategorySelected = function(agency, category) {
+      return vm.selectedAgencies[agency] ? _.contains(vm.selectedAgencies[agency], category) : false;
+    }
+
+    vm.toggleAgency = function (agency) {
+      if(vm.isAgencySelected(agency)) {
+        delete vm.selectedAgencies[agency];
+      } else {
+        vm.selectedAgencies[agency] = _.keys(agencyServiceRequests[agency]);
+      }
+
+      vm.updateServiceRequests();
+    }
+
+    vm.toggleCategory = function(agency, category) {
+      if(vm.isCategorySelected(agency, category)) {
+        vm.selectedAgencies[agency] = _.pull(vm.selectedAgencies[agency], category);
+      } else {
+        vm.selectedAgencies[agency].push(category);
+      }
+
+      vm.updateServiceRequests();
+    }
+
+    vm.isStatusSelected = function (status) {
+      return _.contains(vm.selectedStatuses, status);
+    };
+
+    vm.toggleStatus = function (status) {
+      console.time('toggleStatus');
+      if(vm.isStatusSelected(status)){
+        vm.selectedStatuses = _.pull(vm.selectedStatuses, status);
+      } else {
+        vm.selectedStatuses.push(status);
+      }
+
+      // defer data updates so we can update the screen immediately
+      vm.debouncedUpdateChartsAndRequests();
+    }
+
+    vm.updateCharts = function () {
+      console.time("updateCharts");
+      vm.sparklineAgencyCharts = vm.buildTimeSeriesData(agencyServiceRequests, vm.selectedStartDate, vm.selectedEndDate);
+      console.timeEnd("updateCharts");
+    };
+
+    vm.updateServiceRequests();
+    vm.updateCharts();
   }
 })();

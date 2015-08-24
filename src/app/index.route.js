@@ -39,11 +39,10 @@
 
           serviceRequests: function(ServiceRequest, _, moment) {
             return ServiceRequest.query().$promise.then(function (result){
-              var items = _.filter(result, {status: 'Open'}),
-                  markers = [];
+              var markers = [];
 
-              for ( var i = 0; i < items.length; i++ ) {
-                var item = items[i];
+              for ( var i = 0; i < result.length; i++ ) {
+                var item = result[i];
 
                 item.requested_day = moment(item.requested_datetime, 'YYYY-MM-DD').valueOf();
 
